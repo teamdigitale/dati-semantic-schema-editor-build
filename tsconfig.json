@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                 // versione JS da generare
+    "module": "ESNext",                 // sistema di moduli
+    "lib": ["DOM", "ES2020"],           // ambienti globali disponibili
+    "jsx": "react-jsx",                 // abilita JSX per React 17+
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,            // permette import default da moduli CommonJS
+    "skipLibCheck": true,               // ignora errori dentro node_modules
+    "types": ["node"]                   // include tipi di Node.js (per 'path', ecc.)
+  },
+  "include": ["src", "vite.config.ts"], // file che TypeScript deve considerare
+  "exclude": ["node_modules", "dist"]   // cartelle da ignorare
+}
