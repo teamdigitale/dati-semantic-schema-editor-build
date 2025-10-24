@@ -7,6 +7,7 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify('production') // evita errori con process
   },
+  base: './',   // per risorse relative
   build: {
     outDir: 'dist',
     emptyOutDir: true,
