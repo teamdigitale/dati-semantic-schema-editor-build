@@ -31,9 +31,11 @@ jobs:
 
       # Deploy su gh-pages con latest & previous
       - name: Deploy latest & previous
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Clona il repository
-          git clone https://github.com/${{ github.repository }} gh-pages
+          # Clona il repository usando token per push
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
           cd gh-pages || exit
 
           # Controlla se esiste il branch gh-pages
