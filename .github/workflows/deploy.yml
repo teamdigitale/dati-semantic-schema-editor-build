@@ -1,6 +1,5 @@
-name: Build & Deploy Schema-Editor
+name: Deploy Schema Editor
 
-# Trigger su push al branch di test o main
 on:
   push:
     branches:
@@ -11,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout del repository
+      # Checkout codice sorgente
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -21,48 +20,60 @@ jobs:
         with:
           node-version: 20
 
-      # Installa le dipendenze
+      # Installa dipendenze
       - name: Install dependencies
         run: npm ci
 
-      # Build del progetto
+      # Build progetto (ferma il job se fallisce)
       - name: Build project
-        run: npm run build
+        run: |
+          set -e
+          npm run build
+          echo "✅ Build completata correttamente"
 
-      # Deploy su gh-pages con latest & previous
+      # Deploy latest & previous su gh-pages
       - name: Deploy latest & previous
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Clona il repository usando token per push
-          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
-          cd gh-pages || exit
+          set -e
 
-          # Controlla se esiste il branch gh-pages
-          if git show-ref --quiet refs/heads/gh-pages; then
-            git checkout gh-pages
+          # Clona il branch gh-pages se esiste
+          if git ls-remote --exit-code --heads https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages; then
+            git clone --branch gh-pages https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
           else
-            # Crea branch gh-pages vuoto
+            git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
+            cd gh-pages
             git checkout --orphan gh-pages
             git rm -rf .
+            cd ..
           fi
 
-          # Aggiorna previous
+          cd gh-pages
+
+          # Se esiste latest, spostala in previous
           if [ -d latest ]; then
+            echo "Sposto latest in previous"
             rm -rf previous
             mv latest previous
+          else
+            echo "Nessuna build precedente, creo cartella previous vuota"
+            mkdir -p previous
           fi
 
-          # Aggiorna latest con la nuova build
+          # Copia nuova build in latest
+          echo "Aggiorno latest"
           rm -rf latest
           mkdir latest
           cp -r ../dist/* latest/
 
-          # Configura git
+          # Configura Git
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           # Commit & push
           git add .
-          git commit -m "Deploy new build: update latest and previous" || echo "No changes to commit"
+          git commit -m "Deploy new build: update latest and previous" || echo "⚠️ Nessuna modifica da commitare"
           git push origin gh-pages --force
+
+          echo "Deploy completato con successo!"
