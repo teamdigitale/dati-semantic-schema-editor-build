@@ -5,6 +5,7 @@ on:
     workflows: ["Build Schema Editor"]
     types:
       - completed
+    branches: [main]
 
 jobs:
   deploy:
@@ -12,25 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
 
     steps:
-      # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # Download build artifact
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: schema-editor-dist
           path: dist
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Legge versione da package.json
       - name: Read version
         id: version
-        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      # Crea e pusha automaticamente il tag Git
       - name: Create and push tag
         run: |
           VERSION=v${{ steps.version.outputs.version }}
@@ -45,47 +47,36 @@ jobs:
             echo "Creato e pushato il tag $VERSION"
           fi
 
-      # Clona branch usato per GitHub Pages
-      - name: Clone build-test branch
-        run: |
-          git clone --branch build-test https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages-temp
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-      # Mantiene solo le ultime 3 versioni
-      - name: Clean old versions
-        run: |
-          cd gh-pages-temp
-          ls -1v | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n -3 | xargs -r rm -rf
-
-      # Copia la nuova build
-      - name: Copy new build
+      - name: Prepare deployment with versioning
         run: |
           VERSION=v${{ steps.version.outputs.version }}
-          cd gh-pages-temp
+          mkdir -p _site
+          
+          # Crea cartella versione specifica
+          mkdir -p _site/$VERSION
+          cp -r dist/* _site/$VERSION/
+          
+          # Aggiorna 'latest'
+          rm -rf _site/latest
+          mkdir -p _site/latest
+          cp -r dist/* _site/latest/
+          
+          # Pulisci versioni vecchie (mantieni ultime 3)
+          cd _site
+          ls -1d v*/ 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf
+          
+          # Crea file di riferimento per WordPress
+          VERSIONS=$(ls -1d v*/ 2>/dev/null | sort -V | jq -R -s -c 'split("\n") | map(select(. != ""))')
+          echo "{\"latest\": \"latest\", \"versions\": $VERSIONS}" > versions.json
 
-          # Crea cartella versionata
-          mkdir -p "$VERSION"
-          cp -r ../dist/* "$VERSION"/
-
-          # Aggiorna la cartella latest con i file della build
-          rm -rf latest
-          mkdir latest
-          cp -r ../dist/* latest/
-
-          # Copia anche nella root (opzionale)
-          cp -r ../dist/* .
-
-      # Commit e push su Pages
-      - name: Commit and push to build-test
-        run: |
-          cd gh-pages-temp
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add .
-          git commit -m "Deploy $VERSION" || echo "No changes to commit"
-          git push origin build-test
-
-      # Deploy su GitHub Pages usando l'artifact corretto
-      - name: Deploy Pages
-        uses: actions/deploy-pages@v4
+      - name: Upload artifact to Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          artifact_name: schema-editor-dist
+          path: _site/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
