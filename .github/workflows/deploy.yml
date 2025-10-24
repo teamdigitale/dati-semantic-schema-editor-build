@@ -71,7 +71,7 @@ jobs:
           mkdir latest
           cp -r ../dist/* latest/
 
-          # (opzionale) copia anche i file direttamente nella root
+          # Copia anche nella root (opzionale)
           cp -r ../dist/* .
 
       # Commit e push su Pages
@@ -83,3 +83,9 @@ jobs:
           git add .
           git commit -m "Deploy $VERSION" || echo "No changes to commit"
           git push origin build-test
+
+      # Deploy su GitHub Pages usando l'artifact corretto
+      - name: Deploy Pages
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: schema-editor-dist
