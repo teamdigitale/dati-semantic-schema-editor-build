@@ -1,4 +1,4 @@
-name: Build & Deploy Schema Editor
+name: Build & Deploy Schema-Editor
 
 # Trigger su push al branch di test o main
 on:
