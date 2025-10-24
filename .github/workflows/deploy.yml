@@ -1,90 +1,38 @@
-name: Deploy-Schema-Editor-to-GitHub-Pages
+name: Deploy Schema Editor
 
+# Triggera il deploy su push al branch main
 on:
-  workflow_run:
-    workflows: ["Build-Schema-Editor"]
-    types:
-      - completed
-    branches: [build-test]
+  push:
+    branches:
+      - build-test
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
 
     steps:
+      # Checkout del repository
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
+          node-version: 20
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: schema-editor-dist
-          path: dist
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # Installa le dipendenze
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Read version from package.json
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      # Build del progetto
+      - name: Build
+        run: npm run build
 
-      - name: Create and push tag
-        run: |
-          VERSION=v${{ steps.version.outputs.version }}
-          git fetch --tags
-          if git tag | grep -q "$VERSION"; then
-            echo "Tag $VERSION già esistente, salto creazione."
-          else
-            git config user.name "github-actions"
-            git config user.email "github-actions@users.noreply.github.com"
-            git tag $VERSION
-            git push origin $VERSION
-            echo "Creato e pushato il tag $VERSION"
-          fi
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Prepare deployment (JS/CSS only)
-        run: |
-          DIST_DIR=dist
-          SITE_DIR=_site
-          VERSION=v${{ steps.version.outputs.version }}
-
-          # Pulizia della cartella di deploy
-          rm -rf $SITE_DIR
-          mkdir -p $SITE_DIR
-
-          # Copia i file buildati in versione specifica
-          mkdir -p $SITE_DIR/$VERSION
-          cp -r $DIST_DIR/* $SITE_DIR/$VERSION/
-
-          # Aggiorna 'latest'
-          rm -rf $SITE_DIR/latest
-          mkdir -p $SITE_DIR/latest
-          cp -r $DIST_DIR/* $SITE_DIR/latest/
-
-          # Mantieni solo ultime 3 versioni
-          cd $SITE_DIR
-          ls -1d v*/ 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf
-          cd ..
-
-          # Crea versions.json per WordPress
-          VERSIONS=$(ls -1d $SITE_DIR/v*/ 2>/dev/null | sort -V | jq -R -s -c 'split("\n") | map(select(. != ""))')
-          echo "{\"latest\": \"latest\", \"versions\": $VERSIONS}" > $SITE_DIR/versions.json
-
-      - name: Upload artifact to Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site/
-
+      # Deploy su GitHub Pages
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v7
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
