@@ -36,7 +36,7 @@ jobs:
           VERSION=v${{ steps.version.outputs.version }}
           git fetch --tags
           if git tag | grep -q "$VERSION"; then
-            echo "🔖 Tag $VERSION già esistente, salto creazione."
+            echo "Tag $VERSION già esistente, salto creazione."
           else
             git config user.name "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
@@ -54,19 +54,25 @@ jobs:
       - name: Clean old versions
         run: |
           cd gh-pages-temp
-          ls -1v | head -n -3 | xargs -r rm -rf
+          ls -1v | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n -3 | xargs -r rm -rf
 
       # Copia la nuova build
       - name: Copy new build
         run: |
           VERSION=v${{ steps.version.outputs.version }}
           cd gh-pages-temp
+
+          # Crea cartella versionata
           mkdir -p "$VERSION"
           cp -r ../dist/* "$VERSION"/
 
-          # (opzionale) aggiorna anche la cartella latest/
+          # Aggiorna la cartella latest con i file della build
           rm -rf latest
-          cp -r "$VERSION" latest
+          mkdir latest
+          cp -r ../dist/* latest/
+
+          # (opzionale) copia anche i file direttamente nella root
+          cp -r ../dist/* .
 
       # Commit e push su Pages
       - name: Commit and push to build-test
