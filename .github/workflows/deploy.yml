@@ -1,6 +1,5 @@
 name: Deploy Schema Editor
 
-# Triggera il deploy su push al branch main
 on:
   push:
     branches:
@@ -11,28 +10,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout del repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Installa le dipendenze
       - name: Install dependencies
         run: npm ci
 
-      # Build del progetto
-      - name: Build
+      - name: Build project
         run: npm run build
 
-      # Deploy su GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          publish_branch: gh-pages
+      - name: Deploy latest & previous
+        run: |
+          # Clona branch gh-pages
+          git clone --branch gh-pages https://github.com/${{ github.repository }} gh-pages
+          cd gh-pages || exit
+
+          # Aggiorna previous
+          rm -rf previous
+          if [ -d latest ]; then
+            mv latest previous
+          fi
+
+          # Aggiorna latest
+          mkdir latest
+          cp -r ../dist/* latest/
+
+          # Commit & push
+          git add .
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git commit -m "Deploy new build: update latest and previous"
+          git push origin gh-pages
