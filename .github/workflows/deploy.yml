@@ -1,4 +1,4 @@
-name: Deploy Schema Editor
+name: Build & Deploy Schema Editor
 
 on:
   push:
@@ -29,7 +29,7 @@ jobs:
         run: |
           set -e
           npm run build
-          echo "✅ Build completata correttamente"
+          echo "Build completata correttamente"
 
       # Deploy latest & previous su gh-pages
       - name: Deploy latest & previous
@@ -73,7 +73,7 @@ jobs:
 
           # Commit & push
           git add .
-          git commit -m "Deploy new build: update latest and previous" || echo "⚠️ Nessuna modifica da commitare"
+          git commit -m "Deploy new build: update latest and previous" || echo " Nessuna modifica da commitare"
           git push origin gh-pages --force
 
           echo "Deploy completato con successo!"
