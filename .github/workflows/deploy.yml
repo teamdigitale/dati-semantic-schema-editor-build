@@ -5,7 +5,7 @@ on:
     workflows: ["Build Schema Editor"]
     types:
       - completed
-    branches: [main]
+    branches: [build-test]
 
 jobs:
   deploy:
