@@ -1,0 +1,79 @@
+name: Deploy Schema Editor to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: ["Build Schema Editor"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download build artifact
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: schema-editor-dist
+          path: dist
+
+      # Legge versione da package.json
+      - name: Read version
+        id: version
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+      # Crea e pusha automaticamente il tag Git
+      - name: Create and push tag
+        run: |
+          VERSION=v${{ steps.version.outputs.version }}
+          git fetch --tags
+          if git tag | grep -q "$VERSION"; then
+            echo "🔖 Tag $VERSION già esistente, salto creazione."
+          else
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git tag $VERSION
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} $VERSION
+            echo "Creato e pushato il tag $VERSION"
+          fi
+
+      # Clona branch usato per GitHub Pages
+      - name: Clone build-test branch
+        run: |
+          git clone --branch build-test https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages-temp
+
+      # Mantiene solo le ultime 3 versioni
+      - name: Clean old versions
+        run: |
+          cd gh-pages-temp
+          ls -1v | head -n -3 | xargs -r rm -rf
+
+      # Copia la nuova build
+      - name: Copy new build
+        run: |
+          VERSION=v${{ steps.version.outputs.version }}
+          cd gh-pages-temp
+          mkdir -p "$VERSION"
+          cp -r ../dist/* "$VERSION"/
+
+          # (opzionale) aggiorna anche la cartella latest/
+          rm -rf latest
+          cp -r "$VERSION" latest
+
+      # Commit e push su Pages
+      - name: Commit and push to build-test
+        run: |
+          cd gh-pages-temp
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add .
+          git commit -m "Deploy $VERSION" || echo "No changes to commit"
+          git push origin build-test
