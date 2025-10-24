@@ -25,14 +25,11 @@ jobs:
         run: npm ci
 
       - name: Build
-        # Forza Vite a usare la config personalizzata per build lib
-        run: npx vite build --config vite.config.ts
-
-      - name: List dist contents (debug)
-        run: ls -R dist
+        run: npm run build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: schema-editor-dist
           path: dist
+
