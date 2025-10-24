@@ -50,20 +50,20 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Install jq for JSON processing
+      - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Prepare deployment with versioning
+      - name: Prepare deployment (JS/CSS only)
         run: |
           DIST_DIR=dist
           SITE_DIR=_site
           VERSION=v${{ steps.version.outputs.version }}
 
-          # Pulizia cartella _site
+          # Pulizia della cartella di deploy
           rm -rf $SITE_DIR
           mkdir -p $SITE_DIR
 
-          # Crea cartella per la versione corrente
+          # Copia i file buildati in versione specifica
           mkdir -p $SITE_DIR/$VERSION
           cp -r $DIST_DIR/* $SITE_DIR/$VERSION/
 
@@ -72,12 +72,12 @@ jobs:
           mkdir -p $SITE_DIR/latest
           cp -r $DIST_DIR/* $SITE_DIR/latest/
 
-          # Mantieni solo le ultime 3 versioni
+          # Mantieni solo ultime 3 versioni
           cd $SITE_DIR
           ls -1d v*/ 2>/dev/null | sort -V | head -n -3 | xargs -r rm -rf
           cd ..
 
-          # Crea file versions.json per WordPress
+          # Crea versions.json per WordPress
           VERSIONS=$(ls -1d $SITE_DIR/v*/ 2>/dev/null | sort -V | jq -R -s -c 'split("\n") | map(select(. != ""))')
           echo "{\"latest\": \"latest\", \"versions\": $VERSIONS}" > $SITE_DIR/versions.json
 
@@ -87,5 +87,4 @@ jobs:
           path: _site/
 
       - name: Deploy to GitHub Pages
-        id: deployment
         uses: actions/deploy-pages@v4
