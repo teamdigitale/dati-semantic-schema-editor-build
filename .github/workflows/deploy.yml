@@ -1,8 +1,8 @@
-name: Deploy Schema Editor to GitHub Pages
+name: Deploy-Schema-Editor-to-GitHub-Pages
 
 on:
   workflow_run:
-    workflows: ["Build Schema Editor"]
+    workflows: ["Build-Schema-Editor"]
     types:
       - completed
     branches: [build-test]
