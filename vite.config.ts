@@ -5,23 +5,18 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   define: {
-    'process.env.NODE_ENV': JSON.stringify('production') // evita errori con process
+    'process.env.NODE_ENV': JSON.stringify('production')
   },
   base: './',   // per risorse relative
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    lib: {
-      entry: path.resolve(__dirname, 'src/main.tsx'),
-      name: 'SchemaEditorBundle', // namespace globale
-      formats: ['iife'],           // IIFE = bundle standalone
-      fileName: () => 'index'      // output: dist/index.js
-    },
     rollupOptions: {
+      input: path.resolve(__dirname, 'index.html'),  // build app, non libreria
       output: {
-        entryFileNames: 'index.js',
-        chunkFileNames: '[name].js',
-        assetFileNames: '[name][extname]'
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name][extname]'
       }
     }
   }
