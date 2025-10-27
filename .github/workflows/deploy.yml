@@ -41,7 +41,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" =~ ^refs/tags/ ]]; then
             PACKAGE_VERSION="${{ github.ref_name }}"
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            PACKAGE_VERSION="${UNTRUSTED_GITHUB_HEAD_REF}"
+            PACKAGE_VERSION="PR-${UNTRUSTED_GITHUB_HEAD_REF}"
           else
             PACKAGE_VERSION="latest"
           fi
