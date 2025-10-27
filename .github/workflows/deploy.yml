@@ -3,7 +3,7 @@ name: Build & Deploy Schema Editor
 on:
   push:
     branches:
-      - build-test
+      - main
 
 jobs:
   deploy:
@@ -26,54 +26,26 @@ jobs:
 
       # Build progetto (ferma il job se fallisce)
       - name: Build project
-        run: |
-          set -e
-          npm run build
-          echo "Build completata correttamente"
+        run: npm run build
 
-      # Deploy latest & previous su gh-pages
-      - name: Deploy latest & previous
+      # Set version based on tag, PR or latest
+      - name: Set version based on event type
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UNTRUSTED_GITHUB_HEAD_REF: ${{ github.head_ref }}
         run: |
-          set -e
-
-          # Clona il branch gh-pages se esiste
-          if git ls-remote --exit-code --heads https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages; then
-            git clone --branch gh-pages https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" =~ ^refs/tags/ ]]; then
+            PACKAGE_VERSION="${{ github.ref_name }}"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PACKAGE_VERSION="${UNTRUSTED_GITHUB_HEAD_REF}"
           else
-            git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} gh-pages
-            cd gh-pages
-            git checkout --orphan gh-pages
-            git rm -rf .
-            cd ..
+            PACKAGE_VERSION="latest"
           fi
-
-          cd gh-pages
-
-          # Se esiste latest, spostala in previous
-          if [ -d latest ]; then
-            echo "Sposto latest in previous"
-            rm -rf previous
-            mv latest previous
-          else
-            echo "Nessuna build precedente, creo cartella previous vuota"
-            mkdir -p previous
-          fi
-
-          # Copia nuova build in latest
-          echo "Aggiorno latest"
-          rm -rf latest
-          mkdir latest
-          cp -r ../dist/* latest/
-
-          # Configura Git
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          # Commit & push
-          git add .
-          git commit -m "Deploy new build: update latest and previous" || echo " Nessuna modifica da commitare"
-          git push origin gh-pages --force
-
-          echo "Deploy completato con successo!"
+          
+      # Deploy latest & previous su gh-pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          destination_dir: ${{ env.PACKAGE_VERSION }}
