@@ -22,7 +22,7 @@
     "@fontsource/roboto-mono": "^5.2.8",
     "@fontsource/titillium-web": "^5.2.8",
     "@teamdigitale/schema-editor": "^0.0.7-next.1",
-    "bootstrap-italia": "^2.16.2",
+    "bootstrap-italia": "^2.3.8",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "swagger-client": "^3.34.0",
